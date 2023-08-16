@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: >
+  SAM template for DevSpaces Auth about identity resources
+
+Parameters:   
+  UserPoolDomain:
+    Type: String
+
+  CertificateArn:
+    Type: String
+  
+  DomainName:
+    Type: String
+  
+  StackName:
+    Type: String
+
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: DevSpaces
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Schema:
+        - Name: email
+          Required: true
+      UsernameConfiguration:
+        CaseSensitive: False
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+
+  DevSpacesCLIClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+      CallbackURLs:
+        - "https://app.devspaces.online/auth/callback"
+      DefaultRedirectURI: "https://app.devspaces.online/auth/callback"
+      ClientName: DevSpacesCLI
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      GenerateSecret: false
+      PreventUserExistenceErrors: ENABLED
+      SupportedIdentityProviders:
+        - COGNITO
+      UserPoolId: !Ref UserPool
+
+  UserPoolDomainMapping:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      CustomDomainConfig:
+        CertificateArn: !Ref CertificateArn
+      Domain: !Ref UserPoolDomain
+      UserPoolId: !Ref UserPool
+
+Outputs:
+  UserPool:
+    Value: !Ref UserPool
+    Export:
+      Name: !Sub "${StackName}-user-pool-id"
+    
+  UserPoolArn:
+    Value: !GetAtt UserPool.Arn
+    Export:
+      Name: !Sub "${StackName}-user-pool-arn"
+  
+  DevSpacesCLIClient:
+    Value: !Ref DevSpacesCLIClient
+    Export:
+      Name: !Sub "${StackName}-user-pool-client-id"
+
+  UserPoolDomainDistribution:
+    Value: !GetAtt UserPoolDomainMapping.CloudFrontDistribution

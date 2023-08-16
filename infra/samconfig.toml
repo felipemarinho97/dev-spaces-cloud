@@ -1,0 +1,15 @@
+version = 0.1
+
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "dev-spaces-cloud"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1c0qbjsxytv4p"
+s3_prefix = "dev-spaces-cloud"
+region = "us-east-1"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+disable_rollback = false
+parameter_overrides = "Environment=\"PRODUCTION\""
+tags = "environment=\"production\" project=\"dev-spaces-cloud\""
+image_repositories = []

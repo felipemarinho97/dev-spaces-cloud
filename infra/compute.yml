@@ -1,0 +1,147 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: >
+  SAM template for DevSpaces Auth about compute resources
+
+Parameters:
+  CertificateArn:
+    Type: String
+  DomainName:
+    Type: String
+  UserPool:
+    Type: String
+  UserPoolArn:
+    Type: String
+  CorsOrigin:
+    Type: String
+  DevSpacesCLIClient:
+    Type: String
+  StackName:
+    Type: String
+
+Resources:
+  ApiGateway:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: v1
+      Auth:
+        Authorizers:
+          OAuth2Authorizer:
+            AuthorizationScopes:
+              - "openid"
+              - "profile"
+              - "email"
+            JwtConfiguration:
+              Audience:
+                - !Ref DevSpacesCLIClient
+              Issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}"
+            IdentitySource: "$request.querystring.token"
+        DefaultAuthorizer: OAuth2Authorizer
+      CorsConfiguration:
+        AllowHeaders: 
+          - Authorization
+        AllowMethods: 
+          - GET
+          - OPTIONS
+        AllowOrigins:
+          - !Sub "${CorsOrigin}"
+
+  DNSApiDomainName:
+    Type: AWS::ApiGatewayV2::DomainName
+    Properties:
+      DomainName: !Ref DomainName
+      DomainNameConfigurations:
+        - CertificateArn: !Ref CertificateArn
+          EndpointType: REGIONAL
+          SecurityPolicy: TLS_1_2
+
+  HttpApiMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    Properties: 
+      ApiId: !Ref ApiGateway
+      DomainName: !Ref DNSApiDomainName
+      Stage: !Ref ApiGateway.Stage
+
+
+  #
+  # Functions
+  #
+
+  UpdateDNSFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      InlineCode: |
+        import boto3
+        import json
+
+        def lambda_handler(event, context):
+            client = boto3.client('route53')
+            # get IP from query string
+            ip = event['queryStringParameters']['ip']
+            # get name from query string
+            name = event['queryStringParameters']['name']
+
+            # Get the hosted zone ID
+            hosted_zone_id = client.list_hosted_zones_by_name(
+                DNSName='devspaces.online'
+            )['HostedZones'][0]['Id']
+
+            # add a new record
+            response = client.change_resource_record_sets(
+                HostedZoneId=hosted_zone_id,
+                ChangeBatch={
+                    'Comment': 'Add a new record',
+                    'Changes': [
+                        {
+                            'Action': 'UPSERT',
+                            'ResourceRecordSet': {
+                                'Name': name + '.devspaces.online',
+                                'Type': 'A',
+                                'TTL': 300,
+                                'ResourceRecords': [
+                                    {
+                                        'Value': ip
+                                    },
+                                ],
+                            }
+                        },
+                    ]
+                }
+            )
+
+            return {
+                'statusCode': 200,
+                'body': json.dumps({"address": name + '.devspaces.online'})
+            }
+      Handler: index.lambda_handler
+      Runtime: python3.8
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: route53:ListHostedZonesByName
+              Resource: "*"
+            - Effect: Allow
+              Action: route53:ChangeResourceRecordSets
+              Resource: "*"
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /update
+            Method: GET
+            ApiId: !Ref ApiGateway
+            Auth:
+              Authorizer: OAuth2Authorizer
+            RouteSettings:
+              ThrottlingRateLimit: 10
+
+Outputs:
+  DNSApiRegionalDomainName:
+    Value: !GetAtt DNSApiDomainName.RegionalDomainName
+
+  DNSApiRegionalHostedZoneId:
+    Value: !GetAtt DNSApiDomainName.RegionalHostedZoneId
+
+  ApiGateway:
+    Value: !Ref ApiGateway

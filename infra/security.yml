@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: >
+  SAM template for DevSpaces Auth about security resources
+
+Parameters:
+  UserPoolDomain:
+    Type: String
+
+  DomainName:
+    Type: String
+  
+  HostedZoneId:
+    Type: String
+
+Resources:
+  CertificateDNSDomain:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref DomainName
+          HostedZoneId: !Ref HostedZoneId
+
+  CertificateUserPoolDomain:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref UserPoolDomain
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref UserPoolDomain
+          HostedZoneId: !Ref HostedZoneId
+
+Outputs:
+  DNSDomainCertificateArn:
+    Value: !Ref CertificateDNSDomain
+  UserPoolDomainCertificateArn:
+    Value: !Ref CertificateUserPoolDomain

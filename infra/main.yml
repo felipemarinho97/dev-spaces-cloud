@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues:
+      - PRODUCTION
+  
+Mappings:
+  Environment:
+    PRODUCTION:
+      DomainName: dns.devspaces.online
+      UserPoolDomain: auth.devspaces.online
+      CorsOrigin: "*"
+      HostedZoneId: Z00942333K4DQQP9GAWTO
+  
+Resources:
+  Compute:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        CertificateArn: !GetAtt Security.Outputs.DNSDomainCertificateArn
+        DomainName: !FindInMap [Environment, !Ref Environment, DomainName]
+        CorsOrigin: !FindInMap [Environment, !Ref Environment, CorsOrigin]
+        UserPool: !GetAtt Identity.Outputs.UserPool
+        UserPoolArn: !GetAtt Identity.Outputs.UserPoolArn
+        DevSpacesCLIClient: !GetAtt Identity.Outputs.DevSpacesCLIClient
+        StackName: !Ref AWS::StackName
+      Tags:
+        - Key: layer
+          Value: compute
+      TemplateURL: ./compute.yml
+
+  Identity:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        UserPoolDomain: !FindInMap [Environment, !Ref Environment, UserPoolDomain]
+        CertificateArn: !GetAtt Security.Outputs.UserPoolDomainCertificateArn
+        DomainName: !FindInMap [Environment, !Ref Environment, DomainName]
+        StackName: !Ref AWS::StackName
+      Tags:
+        - Key: layer
+          Value: identity
+        - Key: sensitivity
+          Value: confidential
+      TemplateURL: ./identity.yml
+
+  Security:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        DomainName: !FindInMap [Environment, !Ref Environment, DomainName]
+        UserPoolDomain: !FindInMap [Environment, !Ref Environment, UserPoolDomain]
+        HostedZoneId: !FindInMap [Environment, !Ref Environment, HostedZoneId]
+      Tags:
+        - Key: layer
+          Value: security
+      TemplateURL: ./security.yml
+
+  Network:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        DomainName: !FindInMap [Environment, !Ref Environment, DomainName]
+        DNSApiRegionalDomainName: !GetAtt Compute.Outputs.DNSApiRegionalDomainName
+        DNSApiRegionalHostedZoneId: !GetAtt Compute.Outputs.DNSApiRegionalHostedZoneId
+        UserPoolDomain: !FindInMap [Environment, !Ref Environment, UserPoolDomain]
+        UserPoolDomainDistribution: !GetAtt Identity.Outputs.UserPoolDomainDistribution
+        HostedZoneId: !FindInMap [Environment, !Ref Environment, HostedZoneId]
+      Tags:
+        - Key: layer
+          Value: network
+      TemplateURL: ./network.yml

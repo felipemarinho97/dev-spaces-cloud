@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: >
+  SAM template for DevSpaces Auth about network resources
+Parameters:
+  DomainName:
+    Type: String
+  DNSApiRegionalDomainName:
+    Type: String
+  DNSApiRegionalHostedZoneId:
+    Type: String
+  UserPoolDomain:
+    Type: String
+  UserPoolDomainDistribution:
+    Type: String
+  HostedZoneId:
+    Type: String
+
+Resources:
+  ProxyDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Comment: "DNS name for API proxy"
+      Type: "A"
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      AliasTarget:
+        DNSName: !Ref DNSApiRegionalDomainName
+        HostedZoneId: !Ref DNSApiRegionalHostedZoneId
+
+  AuthDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Comment: "DNS name for Auth"
+      Type: "CNAME"
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref UserPoolDomain
+      ResourceRecords:
+        - !Ref UserPoolDomainDistribution
+      TTL: "600"
