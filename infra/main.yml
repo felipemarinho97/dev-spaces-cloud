@@ -28,6 +28,7 @@ Resources:
         HostedZoneId: !FindInMap [Environment, !Ref Environment, HostedZoneId]
         CertificateArn: !GetAtt Security.Outputs.DNSDomainCertificateArn
         DomainName: !FindInMap [Environment, !Ref Environment, DomainName]
+        AuthDomainName: !FindInMap [Environment, !Ref Environment, UserPoolDomain]
         CorsOrigin: !FindInMap [Environment, !Ref Environment, CorsOrigin]
         UserPool: !GetAtt Identity.Outputs.UserPool
         UserPoolArn: !GetAtt Identity.Outputs.UserPoolArn

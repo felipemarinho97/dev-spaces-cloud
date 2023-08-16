@@ -46,8 +46,8 @@ Resources:
         - openid
         - profile
       CallbackURLs:
-        - "https://app.devspaces.online/auth/callback"
-      DefaultRedirectURI: "https://app.devspaces.online/auth/callback"
+        - "https://dns.devspaces.online/auth/callback"
+      DefaultRedirectURI: "https://dns.devspaces.online/auth/callback"
       ClientName: DevSpacesCLI
       ExplicitAuthFlows:
         - ALLOW_USER_PASSWORD_AUTH

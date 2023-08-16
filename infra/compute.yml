@@ -11,6 +11,8 @@ Parameters:
     Type: String
   DomainName:
     Type: String
+  AuthDomainName:
+    Type: String
   UserPool:
     Type: String
   UserPoolArn:
@@ -98,6 +100,26 @@ Resources:
               Authorizer: OAuth2Authorizer
             RouteSettings:
               ThrottlingRateLimit: 10
+  
+  AuthCallbackFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../functions/auth-callback
+      Handler: main.lambda_handler
+      Runtime: python3.11
+      Environment:
+        Variables:
+          CLIENT_ID: !Ref DevSpacesCLIClient
+          AUTH_API: !Ref AuthDomainName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /auth/callback
+            Method: GET
+            ApiId: !Ref ApiGateway
+            Auth:
+              Authorizer: NONE
 
 Outputs:
   DNSApiRegionalDomainName:
